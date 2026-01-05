@@ -1,0 +1,60 @@
+============================================================
+FIRE RISK MODEL V4 - TRAINING SUMMARY
+============================================================
+
+Training Date: 2026-01-04T22:08:54.726256
+Model Type: fire
+
+ARCHITECTURE:
+  Algorithm: Random Forest Classifier
+  n_estimators: 200
+  max_depth: 15
+  class_weight: balanced
+
+FEATURES:
+  Total: 19
+    - fires_7d_count
+    - fires_30d_count
+    - fire_max_brightness_7d
+    - fire_avg_brightness_7d
+    - fire_max_frp_7d
+    - fire_avg_frp_7d
+    - fires_persistent_days
+    - days_since_last_fire
+    - temp_mean
+    - temp_max
+    - humidity_mean
+    - humidity_min
+    - wind_max
+    - rain_total
+    - dry_days
+    - latitude
+    - longitude
+    - month
+    - season
+
+EVALUATION METRICS (Test Set):
+  Recall:    0.190
+  Precision: 0.500
+  F1-Score:  0.276
+  PR-AUC:    0.289
+  ROC-AUC:   0.737
+  Accuracy:  0.959
+
+CONFUSION MATRIX:
+              Predicted
+              0      1
+    Actual 0   493     4
+           1    17     4
+
+TOP 10 FEATURES:
+  fires_30d_count               : 0.1150
+  humidity_min                  : 0.1147
+  humidity_mean                 : 0.1020
+  wind_max                      : 0.0802
+  rain_total                    : 0.0726
+  temp_max                      : 0.0699
+  temp_mean                     : 0.0684
+  longitude                     : 0.0551
+  latitude                      : 0.0494
+  fire_avg_frp_7d               : 0.0423

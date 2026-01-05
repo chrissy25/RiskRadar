@@ -1,0 +1,39 @@
+# =============================================================================
+# RiskRadar V4 - Docker Compose Configuration
+# =============================================================================
+
+services:
+  # Main application container
+  radar:
+    build: .
+    container_name: riskradar-v4
+    env_file:
+      - .env
+    volumes:
+      # Mount directories for persistence
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./FIRMS_2024_ARCHIVE:/app/FIRMS_2024_ARCHIVE:ro
+      - ./FIRMS_2025_NRT:/app/FIRMS_2025_NRT
+    networks:
+      - radar-network
+    # Keep container running for interactive commands
+    tty: true
+    stdin_open: true
+
+  # Web viewer for results (optional)
+  viewer:
+    image: nginx:alpine
+    container_name: riskradar-viewer
+    ports:
+      - "8080:80"
+    volumes:
+      - ./outputs:/usr/share/nginx/html:ro
+    networks:
+      - radar-network
+    depends_on:
+      - radar
+
+networks:
+  radar-network:
+    driver: bridge

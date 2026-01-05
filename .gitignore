@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.env
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Project specific - Cache
+data/cache/*.json
+data/cache/*.csv
+
+# Project specific - Models (zu groß für Git)
+outputs/*.pkl
+outputs/*.joblib
+
+# Project specific - Large Data Files
+FIRMS_2024_ARCHIVE/*.csv
+FIRMS_2025_NRT/*.csv
+data/cache/*.csv
+
+# Project specific - Large CSVs (optional: auskommentieren wenn pushen)
+# outputs/*.csv
+# outputs/*.html
+
+# Environment variables
+.env.local
+.env.production
+
+# Keep directory structure
+!data/cache/.gitkeep
+!outputs/.gitkeep
+
+# Archive/Backup (nicht committen)
+archive/
+backup/
+*.zip
+*.tar.gz
