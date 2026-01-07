@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # ==================== LABEL CONFIGURATION ====================
 
 # Gemeinsame Definitionen
-RADIUS_KM = 50  # Haversine-Radius um Standort (direkte Umgebung)
+RADIUS_KM = 150  # Haversine-Radius um Standort (direkte Umgebung)
 PREDICTION_HORIZON_HOURS = 72  # 72h Vorhersage-Fenster
 
 # FIRMS (Wildfire) Konfiguration
