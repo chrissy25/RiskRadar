@@ -238,7 +238,7 @@ def add_historical_layer(
     map_obj: folium.Map,
     firms_df: pd.DataFrame,
     usgs_df: pd.DataFrame,
-    days_back: int = 30
+    days_back: int = 365  # Extended to 1 year to capture more data
 ) -> None:
     """Add historical fire and earthquake layers to the map."""
     
@@ -246,26 +246,38 @@ def add_historical_layer(
     fire_group = folium.FeatureGroup(name="🔥 Historische Feuer", show=False)
     
     if not firms_df.empty:
-        # Filter to recent data
-        cutoff_date = pd.Timestamp.now(tz='UTC') - timedelta(days=days_back)
-        recent_fires = firms_df[firms_df['acq_date'] > cutoff_date].head(500)
-        
-        # Add marker cluster for fires
-        fire_cluster = plugins.MarkerCluster(name="Fire Detections")
-        
-        for _, row in recent_fires.iterrows():
-            folium.CircleMarker(
-                location=[row['latitude'], row['longitude']],
-                radius=3,
-                color='red',
-                fill=True,
-                fillColor='red',
-                fillOpacity=0.6,
-                popup=f"Fire Detection<br>Date: {row['acq_date']}<br>"
-                      f"Brightness: {row.get('brightness', 'N/A')}"
-            ).add_to(fire_cluster)
-        
-        fire_cluster.add_to(fire_group)
+        try:
+            # Ensure datetime parsing
+            if not pd.api.types.is_datetime64_any_dtype(firms_df['acq_date']):
+                firms_df = firms_df.copy()
+                firms_df['acq_date'] = pd.to_datetime(firms_df['acq_date'], format='ISO8601')
+            
+            # Make timezone-naive for comparison
+            cutoff_date = pd.Timestamp.now() - timedelta(days=days_back)
+            if firms_df['acq_date'].dt.tz is not None:
+                firms_df['acq_date'] = firms_df['acq_date'].dt.tz_localize(None)
+            
+            recent_fires = firms_df[firms_df['acq_date'] > cutoff_date].head(500)
+            logger.info(f"  Historical fires layer: {len(recent_fires)} detections")
+            
+            # Add marker cluster for fires
+            fire_cluster = plugins.MarkerCluster(name="Fire Detections")
+            
+            for _, row in recent_fires.iterrows():
+                folium.CircleMarker(
+                    location=[row['latitude'], row['longitude']],
+                    radius=3,
+                    color='red',
+                    fill=True,
+                    fillColor='red',
+                    fillOpacity=0.6,
+                    popup=f"Fire Detection<br>Date: {row['acq_date']}<br>"
+                          f"Brightness: {row.get('brightness', 'N/A')}"
+                ).add_to(fire_cluster)
+            
+            fire_cluster.add_to(fire_group)
+        except Exception as e:
+            logger.warning(f"Error adding fire layer: {e}")
     
     fire_group.add_to(map_obj)
     
@@ -273,22 +285,47 @@ def add_historical_layer(
     quake_group = folium.FeatureGroup(name="🌍 Historische Erdbeben", show=False)
     
     if not usgs_df.empty:
-        cutoff_date = pd.Timestamp.now(tz='UTC') - timedelta(days=days_back)
-        recent_quakes = usgs_df[usgs_df['time'] > cutoff_date].head(200)
-        
-        for _, row in recent_quakes.iterrows():
-            mag = row.get('mag', 3.0)
-            radius = max(3, mag * 2)  # Scale by magnitude
+        try:
+            # Ensure datetime parsing with flexible format
+            usgs_df = usgs_df.copy()
+            if not pd.api.types.is_datetime64_any_dtype(usgs_df['time']):
+                usgs_df['time'] = pd.to_datetime(usgs_df['time'], format='ISO8601')
             
-            folium.CircleMarker(
-                location=[row['latitude'], row['longitude']],
-                radius=radius,
-                color='blue',
-                fill=True,
-                fillColor='blue',
-                fillOpacity=0.5,
-                popup=f"Earthquake<br>Magnitude: {mag}<br>Date: {row['time']}"
-            ).add_to(quake_group)
+            # Make timezone-naive for comparison
+            if usgs_df['time'].dt.tz is not None:
+                usgs_df['time'] = usgs_df['time'].dt.tz_localize(None)
+            
+            cutoff_date = pd.Timestamp.now() - timedelta(days=days_back)
+            recent_quakes = usgs_df[usgs_df['time'] > cutoff_date]
+            
+            # If no recent quakes, show all available data (sample)
+            if len(recent_quakes) == 0:
+                logger.info(f"  No quakes in last {days_back} days, showing sample of all data")
+                recent_quakes = usgs_df.head(300)
+            else:
+                recent_quakes = recent_quakes.head(300)
+            
+            logger.info(f"  Historical quakes layer: {len(recent_quakes)} earthquakes")
+            
+            for _, row in recent_quakes.iterrows():
+                mag = row.get('mag', 3.0)
+                if pd.isna(mag):
+                    mag = 3.0
+                radius = max(3, float(mag) * 2)  # Scale by magnitude
+                
+                folium.CircleMarker(
+                    location=[row['latitude'], row['longitude']],
+                    radius=radius,
+                    color='blue',
+                    fill=True,
+                    fillColor='blue',
+                    fillOpacity=0.5,
+                    popup=f"Earthquake<br>Magnitude: {mag:.1f}<br>"
+                          f"Date: {row['time']}<br>"
+                          f"Location: {row.get('place', 'N/A')}"
+                ).add_to(quake_group)
+        except Exception as e:
+            logger.warning(f"Error adding earthquake layer: {e}")
     
     quake_group.add_to(map_obj)
 
