@@ -490,24 +490,116 @@ body {
 
 # ==================== JAVASCRIPT ====================
 
-DASHBOARD_JS = '''
-<script>
-function selectRoute(routeId) {
-    console.log('Selected route:', routeId);
-    // TODO: Highlight route on map, update profile
-}
-
-function filterRoutes(query) {
-    const items = document.querySelectorAll('.route-item');
-    const lowerQuery = query.toLowerCase();
+def generate_dashboard_js(predictions_df: pd.DataFrame, routes: List[Route]) -> str:
+    """Generate JavaScript with embedded location data for search functionality."""
     
-    items.forEach(item => {
+    # Build location data for search
+    locations = []
+    
+    # Add prediction locations
+    for _, row in predictions_df.iterrows():
+        locations.append({
+            'name': row['site_name'],
+            'lat': float(row['lat']),
+            'lon': float(row['lon']),
+            'type': 'location'
+        })
+    
+    # Add route waypoints
+    for route in routes:
+        for point in route.points:
+            # Check if already added
+            if not any(loc['name'].lower() == point.name.lower() for loc in locations):
+                locations.append({
+                    'name': point.name,
+                    'lat': float(point.lat),
+                    'lon': float(point.lon),
+                    'type': 'waypoint',
+                    'route': route.route_id
+                })
+    
+    locations_json = json.dumps(locations)
+    
+    return f'''
+<script>
+// Location data for search
+const locationData = {locations_json};
+
+// Get map object from iframe
+function getMapObject() {{
+    const iframe = document.querySelector('#map-container iframe');
+    if (iframe && iframe.contentWindow) {{
+        // Folium stores map in a variable like map_<hash>
+        const win = iframe.contentWindow;
+        for (let key in win) {{
+            if (key.startsWith('map_') && win[key] && typeof win[key].flyTo === 'function') {{
+                return win[key];
+            }}
+        }}
+    }}
+    return null;
+}}
+
+function selectRoute(routeId) {{
+    console.log('Selected route:', routeId);
+    // Find first waypoint of route and pan to it
+    const waypoint = locationData.find(loc => loc.route === routeId);
+    if (waypoint) {{
+        panToLocation(waypoint.lat, waypoint.lon, waypoint.name);
+    }}
+}}
+
+function panToLocation(lat, lon, name) {{
+    const map = getMapObject();
+    if (map) {{
+        map.flyTo([lat, lon], 8, {{ duration: 1.5 }});
+        console.log('Panning to:', name, lat, lon);
+    }} else {{
+        console.warn('Map object not found');
+    }}
+}}
+
+function filterRoutes(query) {{
+    const items = document.querySelectorAll('.route-item');
+    const lowerQuery = query.toLowerCase().trim();
+    
+    items.forEach(item => {{
         const text = item.textContent.toLowerCase();
         item.style.display = text.includes(lowerQuery) ? 'block' : 'none';
-    });
-}
+    }});
+    
+    // If Enter pressed or query matches a location, pan to it
+    if (lowerQuery.length >= 2) {{
+        const match = locationData.find(loc => 
+            loc.name.toLowerCase().includes(lowerQuery)
+        );
+        if (match) {{
+            panToLocation(match.lat, match.lon, match.name);
+            updateLocationProfile(match.name, 0, 0, 0);  // TODO: Get actual risks
+        }}
+    }}
+}}
 
-function updateLocationProfile(name, fire, quake, flood) {
+// Handle Enter key in search box
+document.addEventListener('DOMContentLoaded', function() {{
+    const searchBox = document.getElementById('search-box');
+    if (searchBox) {{
+        searchBox.addEventListener('keydown', function(e) {{
+            if (e.key === 'Enter') {{
+                const query = this.value.toLowerCase().trim();
+                const match = locationData.find(loc => 
+                    loc.name.toLowerCase() === query ||
+                    loc.name.toLowerCase().startsWith(query)
+                );
+                if (match) {{
+                    panToLocation(match.lat, match.lon, match.name);
+                }}
+            }}
+        }});
+    }}
+}});
+
+function updateLocationProfile(name, fire, quake, flood) {{
     document.getElementById('profile-name').textContent = name;
     document.getElementById('profile-fire').textContent = fire.toFixed(0) + '%';
     document.getElementById('profile-quake').textContent = quake.toFixed(0) + '%';
@@ -516,7 +608,7 @@ function updateLocationProfile(name, fire, quake, flood) {
     document.getElementById('bar-fire').style.width = fire + '%';
     document.getElementById('bar-quake').style.width = quake + '%';
     document.getElementById('bar-flood').style.width = flood + '%';
-}
+}}
 </script>
 '''
 
@@ -575,6 +667,9 @@ class RiskDashboard:
         # Generate sidebar
         sidebar_html = generate_sidebar_html(self.routes)
         
+        # Generate JavaScript with location data
+        dashboard_js = generate_dashboard_js(self.predictions_df, self.routes)
+        
         # Combine into full HTML
         map_html = m._repr_html_()
         
@@ -592,7 +687,7 @@ class RiskDashboard:
     <div id="map-container">
         {map_html}
     </div>
-    {DASHBOARD_JS}
+    {dashboard_js}
 </body>
 </html>
         '''
