@@ -100,16 +100,31 @@ def generate_location_profile_html(location_name: str = "Select Location",
     '''
 
 
-def generate_forecast_chart_html() -> str:
-    """Generate HTML for the forecast/analysis chart placeholder."""
+def generate_route_builder_html() -> str:
+    """Generate HTML for the dynamic route builder section."""
     return '''
-    <div class="forecast-section">
-        <h4>Prognose & Analyse</h4>
-        <div class="chart-legend">
-            <span class="legend-fire">■ Feuer</span>
-            <span class="legend-analysis">■ Analyse</span>
+    <div class="route-builder-section">
+        <h4>🛤️ Routen-Builder</h4>
+        <p class="builder-hint" id="builder-hint">Klicken Sie auf Standorte auf der Karte, um eine Route zu erstellen</p>
+        <div id="route-builder-list"></div>
+        <div id="route-summary" style="display: none;">
+            <div class="risk-total">
+                <div class="risk-row">
+                    <span>🔥 Feuer:</span>
+                    <span id="total-fire">0%</span>
+                </div>
+                <div class="risk-row">
+                    <span>🌍 Erdbeben:</span>
+                    <span id="total-quake">0%</span>
+                </div>
+                <hr>
+                <div class="risk-row total-row">
+                    <strong>⚠️ Gesamtrisiko:</strong>
+                    <strong id="total-risk">0%</strong>
+                </div>
+            </div>
         </div>
-        <canvas id="forecast-chart" width="250" height="120"></canvas>
+        <button id="clear-route-btn" onclick="clearRoute()" style="display: none;">Route löschen</button>
     </div>
     '''
 
@@ -118,7 +133,7 @@ def generate_sidebar_html(routes: List[Route]) -> str:
     """Generate complete sidebar HTML."""
     route_list = generate_route_list_html(routes)
     location_profile = generate_location_profile_html()
-    forecast_chart = generate_forecast_chart_html()
+    route_builder = generate_route_builder_html()
     
     return f'''
     <div id="sidebar">
@@ -129,19 +144,21 @@ def generate_sidebar_html(routes: List[Route]) -> str:
         
         <div class="sidebar-section">
             <h4>Suche & Filter</h4>
-            <input type="text" id="search-box" placeholder="Suchort, Lokation / Routen..." 
-                   onkeyup="filterRoutes(this.value)">
+            <input type="text" id="search-box" placeholder="Suchort, Lokation / Routen..." oninput="filterRoutes(this.value)">
         </div>
         
         <div class="sidebar-section">
             <h4>Aktuelle Routen-Risiken</h4>
-            <div id="route-list">
-                {route_list}
-            </div>
+            {route_list}
         </div>
         
-        {location_profile}
-        {forecast_chart}
+        <div class="sidebar-section">
+            {location_profile}
+        </div>
+        
+        <div class="sidebar-section">
+            {route_builder}
+        </div>
     </div>
     '''
 
@@ -199,7 +216,7 @@ def create_waypoint_markers(map_obj: folium.Map, route: Route) -> None:
         else:
             color = "green"
         
-        # Popup content
+        # Popup content with "Add to Route" button
         popup_html = f'''
         <div style="width: 250px; font-family: Arial, sans-serif;">
             <h4 style="margin: 0 0 10px 0;">{point.name}</h4>
@@ -221,7 +238,11 @@ def create_waypoint_markers(map_obj: folium.Map, route: Route) -> None:
                 <strong>⚠️ Combined:</strong> {point.combined_risk:.1f}%<br>
                 <strong>📈 Accumulated:</strong> {point.accumulated_risk:.1f}%
             </div>
-            <small>Route {route.route_id} - Waypoint {point.order}</small>
+            <button onclick="parent.addToRoute('{point.name}', {point.lat}, {point.lon}, {point.fire_risk}, {point.quake_risk}, {point.combined_risk})"
+                    style="width: 100%; margin-top: 10px; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                ➕ Zur Route hinzufügen
+            </button>
+            <small style="display: block; margin-top: 5px; color: #666;">Route {route.route_id} - Waypoint {point.order}</small>
         </div>
         '''
         
@@ -476,13 +497,94 @@ body {
     margin-bottom: 10px;
 }
 
-.legend-fire { color: #dc3545; margin-right: 15px; }
-.legend-analysis { color: #28a745; }
-
-#forecast-chart {
-    width: 100%;
-    background: #f8f9fa;
+.route-builder-section {
+    background: white;
+    padding: 12px;
     border-radius: 4px;
+}
+
+.route-builder-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.95em;
+}
+
+.builder-hint {
+    color: #666;
+    font-size: 0.85em;
+    font-style: italic;
+    margin: 0;
+}
+
+#route-builder-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.route-waypoint-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    margin: 4px 0;
+    background: #e9ecef;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+.route-waypoint-item .waypoint-name {
+    font-weight: 500;
+}
+
+.route-waypoint-item .waypoint-risk {
+    color: #dc3545;
+}
+
+.route-waypoint-item .remove-btn {
+    cursor: pointer;
+    color: #999;
+    font-size: 1.1em;
+}
+
+.route-waypoint-item .remove-btn:hover {
+    color: #dc3545;
+}
+
+#route-summary {
+    margin-top: 10px;
+}
+
+.risk-total {
+    background: #f8f9fa;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.risk-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-size: 0.9em;
+}
+
+.total-row {
+    font-size: 1em;
+    margin-top: 8px;
+}
+
+#clear-route-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+#clear-route-btn:hover {
+    background: #c82333;
 }
 </style>
 '''
@@ -491,21 +593,24 @@ body {
 # ==================== JAVASCRIPT ====================
 
 def generate_dashboard_js(predictions_df: pd.DataFrame, routes: List[Route]) -> str:
-    """Generate JavaScript with embedded location data for search functionality."""
+    """Generate JavaScript with embedded location data for search and route building."""
     
-    # Build location data for search
+    # Build location data for search - now including risk values
     locations = []
     
-    # Add prediction locations
+    # Add prediction locations with their risk values
     for _, row in predictions_df.iterrows():
         locations.append({
             'name': row['site_name'],
             'lat': float(row['lat']),
             'lon': float(row['lon']),
+            'fireRisk': float(row.get('fire_risk', 0)),
+            'quakeRisk': float(row.get('quake_risk', 0)),
+            'combinedRisk': float(row.get('combined_risk', 0)),
             'type': 'location'
         })
     
-    # Add route waypoints
+    # Add route waypoints with their risk values
     for route in routes:
         for point in route.points:
             # Check if already added
@@ -514,6 +619,9 @@ def generate_dashboard_js(predictions_df: pd.DataFrame, routes: List[Route]) -> 
                     'name': point.name,
                     'lat': float(point.lat),
                     'lon': float(point.lon),
+                    'fireRisk': float(point.fire_risk),
+                    'quakeRisk': float(point.quake_risk),
+                    'combinedRisk': float(point.combined_risk),
                     'type': 'waypoint',
                     'route': route.route_id
                 })
@@ -522,14 +630,16 @@ def generate_dashboard_js(predictions_df: pd.DataFrame, routes: List[Route]) -> 
     
     return f'''
 <script>
-// Location data for search
+// Location data for search and route building
 const locationData = {locations_json};
+
+// Current route being built
+let currentRoute = [];
 
 // Get map object from iframe
 function getMapObject() {{
     const iframe = document.querySelector('#map-container iframe');
     if (iframe && iframe.contentWindow) {{
-        // Folium stores map in a variable like map_<hash>
         const win = iframe.contentWindow;
         for (let key in win) {{
             if (key.startsWith('map_') && win[key] && typeof win[key].flyTo === 'function') {{
@@ -542,7 +652,6 @@ function getMapObject() {{
 
 function selectRoute(routeId) {{
     console.log('Selected route:', routeId);
-    // Find first waypoint of route and pan to it
     const waypoint = locationData.find(loc => loc.route === routeId);
     if (waypoint) {{
         panToLocation(waypoint.lat, waypoint.lon, waypoint.name);
@@ -552,10 +661,8 @@ function selectRoute(routeId) {{
 function panToLocation(lat, lon, name) {{
     const map = getMapObject();
     if (map) {{
-        map.flyTo([lat, lon], 8, {{ duration: 1.5 }});
+        map.flyTo([lat, lon], 5, {{ duration: 1.5 }});
         console.log('Panning to:', name, lat, lon);
-    }} else {{
-        console.warn('Map object not found');
     }}
 }}
 
@@ -568,14 +675,13 @@ function filterRoutes(query) {{
         item.style.display = text.includes(lowerQuery) ? 'block' : 'none';
     }});
     
-    // If Enter pressed or query matches a location, pan to it
     if (lowerQuery.length >= 2) {{
         const match = locationData.find(loc => 
             loc.name.toLowerCase().includes(lowerQuery)
         );
         if (match) {{
             panToLocation(match.lat, match.lon, match.name);
-            updateLocationProfile(match.name, 0, 0, 0);  // TODO: Get actual risks
+            updateLocationProfile(match.name, match.fireRisk || 0, match.quakeRisk || 0, 0);
         }}
     }}
 }}
@@ -605,10 +711,89 @@ function updateLocationProfile(name, fire, quake, flood) {{
     document.getElementById('profile-quake').textContent = quake.toFixed(0) + '%';
     document.getElementById('profile-flood').textContent = flood.toFixed(0) + '%';
     
-    document.getElementById('bar-fire').style.width = fire + '%';
-    document.getElementById('bar-quake').style.width = quake + '%';
-    document.getElementById('bar-flood').style.width = flood + '%';
+    document.getElementById('bar-fire').style.width = Math.min(fire, 100) + '%';
+    document.getElementById('bar-quake').style.width = Math.min(quake, 100) + '%';
+    document.getElementById('bar-flood').style.width = Math.min(flood, 100) + '%';
 }}
+
+// ==================== ROUTE BUILDER FUNCTIONS ====================
+
+function addToRoute(name, lat, lon, fireRisk, quakeRisk, combinedRisk) {{
+    // Check if already in route
+    if (currentRoute.some(p => p.name === name)) {{
+        console.log('Location already in route:', name);
+        return;
+    }}
+    
+    currentRoute.push({{ name, lat, lon, fireRisk, quakeRisk, combinedRisk }});
+    renderRouteBuilder();
+    console.log('Added to route:', name);
+}}
+
+function removeFromRoute(index) {{
+    currentRoute.splice(index, 1);
+    renderRouteBuilder();
+}}
+
+function clearRoute() {{
+    currentRoute = [];
+    renderRouteBuilder();
+}}
+
+function renderRouteBuilder() {{
+    const listEl = document.getElementById('route-builder-list');
+    const summaryEl = document.getElementById('route-summary');
+    const hintEl = document.getElementById('builder-hint');
+    const clearBtn = document.getElementById('clear-route-btn');
+    
+    if (currentRoute.length === 0) {{
+        listEl.innerHTML = '';
+        summaryEl.style.display = 'none';
+        hintEl.style.display = 'block';
+        clearBtn.style.display = 'none';
+        return;
+    }}
+    
+    hintEl.style.display = 'none';
+    summaryEl.style.display = 'block';
+    clearBtn.style.display = 'block';
+    
+    // Render waypoint items
+    let html = '';
+    currentRoute.forEach((point, index) => {{
+        html += `
+            <div class="route-waypoint-item">
+                <span class="waypoint-name">${{index + 1}}. ${{point.name}}</span>
+                <span class="waypoint-risk">⚠️ ${{point.combinedRisk.toFixed(0)}}%</span>
+                <span class="remove-btn" onclick="removeFromRoute(${{index}})">✕</span>
+            </div>
+        `;
+    }});
+    listEl.innerHTML = html;
+    
+    // Calculate totals
+    let totalFire = 0;
+    let totalQuake = 0;
+    let totalCombined = 0;
+    
+    currentRoute.forEach(point => {{
+        totalFire += point.fireRisk;
+        totalQuake += point.quakeRisk;
+        totalCombined += point.combinedRisk;
+    }});
+    
+    // Average the risks (or could use max/sum depending on preference)
+    const avgFire = totalFire / currentRoute.length;
+    const avgQuake = totalQuake / currentRoute.length;
+    const avgCombined = totalCombined / currentRoute.length;
+    
+    document.getElementById('total-fire').textContent = avgFire.toFixed(0) + '%';
+    document.getElementById('total-quake').textContent = avgQuake.toFixed(0) + '%';
+    document.getElementById('total-risk').textContent = avgCombined.toFixed(0) + '%';
+}}
+
+// Expose addToRoute globally for map popups
+window.addToRoute = addToRoute;
 </script>
 '''
 
