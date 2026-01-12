@@ -130,7 +130,7 @@ def generate_route_builder_html() -> str:
 
 
 def generate_sidebar_html(routes: List[Route]) -> str:
-    """Generate complete sidebar HTML."""
+    """Generate complete sidebar HTML with 3 tabs."""
     route_list = generate_route_list_html(routes)
     location_profile = generate_location_profile_html()
     route_builder = generate_route_builder_html()
@@ -142,21 +142,37 @@ def generate_sidebar_html(routes: List[Route]) -> str:
             <h3>Dashboard</h3>
         </div>
         
-        <div class="sidebar-section">
-            <h4>Suche & Filter</h4>
-            <input type="text" id="search-box" placeholder="Suchort, Lokation / Routen..." oninput="filterRoutes(this.value)">
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="search" onclick="switchTab('search')">🔍 Suche</button>
+            <button class="tab-btn" data-tab="routes" onclick="switchTab('routes')">🗺️ Routen</button>
+            <button class="tab-btn" data-tab="build" onclick="switchTab('build')">🛤️ Builder</button>
         </div>
         
-        <div class="sidebar-section">
-            <h4>Aktuelle Routen-Risiken</h4>
-            {route_list}
+        <!-- Tab Content: Search -->
+        <div id="tab-search" class="tab-content active">
+            <div class="sidebar-section">
+                <h4>Standortsuche</h4>
+                <input type="text" id="search-box" placeholder="Standort suchen..." onkeyup="handleSearch(this.value, event)">
+            </div>
+            <div class="sidebar-section">
+                {location_profile}
+            </div>
         </div>
         
-        <div class="sidebar-section">
-            {location_profile}
+        <!-- Tab Content: Pre-defined Routes -->
+        <div id="tab-routes" class="tab-content">
+            <div class="sidebar-section">
+                <h4>Vordefinierte Routen</h4>
+                <div id="route-list">
+                    {route_list}
+                </div>
+            </div>
+            <button class="reset-btn" onclick="resetRouteSelection()">Auswahl zurücksetzen</button>
         </div>
         
-        <div class="sidebar-section">
+        <!-- Tab Content: Build Route -->
+        <div id="tab-build" class="tab-content">
             {route_builder}
         </div>
     </div>
@@ -586,6 +602,63 @@ body {
 #clear-route-btn:hover {
     background: #c82333;
 }
+
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 15px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px 5px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    font-size: 0.8em;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: #333;
+    background: #f8f9fa;
+}
+
+.tab-btn.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    font-weight: 500;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Reset Button */
+.reset-btn {
+    width: 100%;
+    padding: 8px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    margin-top: 10px;
+}
+
+.reset-btn:hover {
+    background: #5a6268;
+}
 </style>
 '''
 
@@ -867,8 +940,75 @@ function renderRouteBuilder() {{
     document.getElementById('total-risk').textContent = avgCombined.toFixed(0) + '%';
 }}
 
+// ==================== TAB FUNCTIONS ====================
+
+function switchTab(tabId) {{
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {{
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+    }});
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {{
+        content.classList.toggle('active', content.id === 'tab-' + tabId);
+    }});
+}}
+
+function handleSearch(query, event) {{
+    const lowerQuery = query.toLowerCase().trim();
+    
+    if (lowerQuery.length >= 2) {{
+        const match = locationData.find(loc => 
+            loc.name.toLowerCase().includes(lowerQuery)
+        );
+        if (match) {{
+            updateLocationProfile(match.name, match.fireRisk || 0, match.quakeRisk || 0, 0);
+        }}
+    }}
+    
+    // On Enter, pan to location
+    if (event && event.key === 'Enter' && lowerQuery.length >= 1) {{
+        const match = locationData.find(loc => 
+            loc.name.toLowerCase() === lowerQuery ||
+            loc.name.toLowerCase().startsWith(lowerQuery)
+        );
+        if (match) {{
+            panToLocation(match.lat, match.lon, match.name);
+            updateLocationProfile(match.name, match.fireRisk || 0, match.quakeRisk || 0, 0);
+        }}
+    }}
+}}
+
+function resetRouteSelection() {{
+    const map = getMapObject();
+    
+    // Remove active polyline
+    if (activeRoutePolyline && map) {{
+        map.removeLayer(activeRoutePolyline);
+        activeRoutePolyline = null;
+    }}
+    
+    selectedRouteId = null;
+    updateRouteItemHighlight(null);
+    console.log('Route selection reset');
+}}
+
 // Expose addToRoute globally for map popups
-window.addToRoute = addToRoute;
+window.addToRoute = function(name, lat, lon, fireRisk, quakeRisk, combinedRisk) {{
+    // Check if already in route
+    if (currentRoute.some(p => p.name === name)) {{
+        console.log('Location already in route:', name);
+        return;
+    }}
+    
+    currentRoute.push({{ name, lat, lon, fireRisk, quakeRisk, combinedRisk }});
+    renderRouteBuilder();
+    
+    // Auto-switch to Build tab
+    switchTab('build');
+    
+    console.log('Added to route:', name);
+}};
 </script>
 '''
 
