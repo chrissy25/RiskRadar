@@ -26,6 +26,7 @@ from sensor_features import extract_all_features
 from firms_client import FIRMSClient
 from usgs_client import USGSClient
 from config import Config
+from risk_dashboard import generate_dashboard
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -443,6 +444,23 @@ def main():
     map_path = OUTPUT_DIR / 'sensor_forecast_map.html'
     create_dual_risk_map(predictions_df, map_path)
     
+    # 5b. Generate Dashboard if routes.csv exists
+    routes_path = DATA_DIR / 'routes.csv'
+    if routes_path.exists():
+        logger.info("\n5b. Generating Risk Dashboard...")
+        dashboard_path = OUTPUT_DIR / 'risk_dashboard.html'
+        generate_dashboard(
+            predictions_df=predictions_df,
+            routes_path=routes_path,
+            output_path=dashboard_path,
+            firms_df=firms_df,
+            usgs_df=usgs_df
+        )
+        logger.info(f"  ✓ Dashboard saved: {dashboard_path}")
+    else:
+        dashboard_path = None
+        logger.info(f"\n  ℹ️ No routes.csv found - skipping dashboard generation")
+    
     # 6. Summary
     logger.info("\n" + "="*80)
     logger.info("PREDICTION SUMMARY")
@@ -465,6 +483,8 @@ def main():
     logger.info(f"\nOutputs:")
     logger.info(f"  - CSV:  {csv_path}")
     logger.info(f"  - Map:  {map_path}")
+    if dashboard_path:
+        logger.info(f"  - Dashboard: {dashboard_path}")
     logger.info(f"\nOpen map in browser to explore results!")
 
 
