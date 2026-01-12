@@ -49,7 +49,7 @@ def generate_route_list_html(routes: List[Route]) -> str:
         end = route.points[-1].name if route.points else "?"
         
         item_html = f'''
-        <div class="route-item" style="border-left: 4px solid {color};" onclick="selectRoute('{route.route_id}')">
+        <div class="route-item" data-route-id="{route.route_id}" style="border-left: 4px solid {color};" onclick="selectRoute('{route.route_id}')">
             <div class="route-header">
                 <strong>Route {route.route_id}: {start} - {end}</strong>
                 <span class="route-icons">{fire_icon}{quake_icon}{flood_icon}</span>
@@ -626,12 +626,36 @@ def generate_dashboard_js(predictions_df: pd.DataFrame, routes: List[Route]) -> 
                     'route': route.route_id
                 })
     
+    # Build route coordinate data for drawing polylines
+    routes_data = []
+    for route in routes:
+        route_coords = []
+        for point in route.points:
+            route_coords.append({
+                'lat': float(point.lat),
+                'lon': float(point.lon),
+                'name': point.name,
+                'risk': float(point.combined_risk)
+            })
+        routes_data.append({
+            'id': route.route_id,
+            'points': route_coords
+        })
+    
     locations_json = json.dumps(locations)
+    routes_json = json.dumps(routes_data)
     
     return f'''
 <script>
 // Location data for search and route building
 const locationData = {locations_json};
+
+// Route coordinate data for drawing polylines
+const routesData = {routes_json};
+
+// Currently active route polyline
+let activeRoutePolyline = null;
+let selectedRouteId = null;
 
 // Current route being built
 let currentRoute = [];
@@ -652,10 +676,61 @@ function getMapObject() {{
 
 function selectRoute(routeId) {{
     console.log('Selected route:', routeId);
-    const waypoint = locationData.find(loc => loc.route === routeId);
-    if (waypoint) {{
-        panToLocation(waypoint.lat, waypoint.lon, waypoint.name);
+    const map = getMapObject();
+    if (!map) {{
+        console.warn('Map not found');
+        return;
     }}
+    
+    // Get Leaflet from iframe
+    const iframe = document.querySelector('#map-container iframe');
+    const L = iframe.contentWindow.L;
+    
+    // Remove previous route if any
+    if (activeRoutePolyline) {{
+        map.removeLayer(activeRoutePolyline);
+        activeRoutePolyline = null;
+    }}
+    
+    // If clicking the same route, toggle off
+    if (selectedRouteId === routeId) {{
+        selectedRouteId = null;
+        updateRouteItemHighlight(null);
+        return;
+    }}
+    
+    selectedRouteId = routeId;
+    updateRouteItemHighlight(routeId);
+    
+    // Find route data
+    const route = routesData.find(r => r.id === routeId);
+    if (!route || route.points.length < 2) {{
+        return;
+    }}
+    
+    // Build polyline coordinates
+    const coords = route.points.map(p => [p.lat, p.lon]);
+    
+    // Draw polyline
+    activeRoutePolyline = L.polyline(coords, {{
+        color: '#3388ff',
+        weight: 4,
+        opacity: 0.8
+    }}).addTo(map);
+    
+    // Pan to first waypoint
+    const first = route.points[0];
+    map.flyTo([first.lat, first.lon], 5, {{ duration: 1.5 }});
+}}
+
+function updateRouteItemHighlight(routeId) {{
+    document.querySelectorAll('.route-item').forEach(item => {{
+        if (item.getAttribute('data-route-id') === routeId) {{
+            item.style.background = '#cce5ff';
+        }} else {{
+            item.style.background = 'white';
+        }}
+    }});
 }}
 
 function panToLocation(lat, lon, name) {{
@@ -829,9 +904,8 @@ class RiskDashboard:
             tiles='OpenStreetMap'
         )
         
-        # Add routes (polylines only, no waypoint markers)
-        for route in self.routes:
-            create_route_polylines(m, route)
+        # Routes are now shown dynamically via JavaScript when selected
+        # (Route polylines are not added to the initial map)
         
         # Add prediction markers for non-route locations
         self._add_prediction_markers(m)
