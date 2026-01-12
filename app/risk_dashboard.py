@@ -238,32 +238,27 @@ def add_historical_layer(
     map_obj: folium.Map,
     firms_df: pd.DataFrame,
     usgs_df: pd.DataFrame,
-    days_back: int = 365  # Extended to 1 year to capture more data
+    max_fires: int = 1000,
+    max_quakes: int = 500
 ) -> None:
-    """Add historical fire and earthquake layers to the map."""
+    """Add historical fire and earthquake layers to the map.
+    
+    Shows all available data without time filtering.
+    """
     
     # Historical Fires Layer
     fire_group = folium.FeatureGroup(name="🔥 Historische Feuer", show=False)
     
     if not firms_df.empty:
         try:
-            # Ensure datetime parsing
-            if not pd.api.types.is_datetime64_any_dtype(firms_df['acq_date']):
-                firms_df = firms_df.copy()
-                firms_df['acq_date'] = pd.to_datetime(firms_df['acq_date'], format='ISO8601')
-            
-            # Make timezone-naive for comparison
-            cutoff_date = pd.Timestamp.now() - timedelta(days=days_back)
-            if firms_df['acq_date'].dt.tz is not None:
-                firms_df['acq_date'] = firms_df['acq_date'].dt.tz_localize(None)
-            
-            recent_fires = firms_df[firms_df['acq_date'] > cutoff_date].head(500)
-            logger.info(f"  Historical fires layer: {len(recent_fires)} detections")
+            # Use all available fire data (limited for performance)
+            fires_to_show = firms_df.head(max_fires)
+            logger.info(f"  Historical fires layer: {len(fires_to_show)} of {len(firms_df)} detections")
             
             # Add marker cluster for fires
             fire_cluster = plugins.MarkerCluster(name="Fire Detections")
             
-            for _, row in recent_fires.iterrows():
+            for _, row in fires_to_show.iterrows():
                 folium.CircleMarker(
                     location=[row['latitude'], row['longitude']],
                     radius=3,
@@ -271,7 +266,7 @@ def add_historical_layer(
                     fill=True,
                     fillColor='red',
                     fillOpacity=0.6,
-                    popup=f"Fire Detection<br>Date: {row['acq_date']}<br>"
+                    popup=f"Fire Detection<br>Date: {row.get('acq_date', 'N/A')}<br>"
                           f"Brightness: {row.get('brightness', 'N/A')}"
                 ).add_to(fire_cluster)
             
@@ -286,28 +281,11 @@ def add_historical_layer(
     
     if not usgs_df.empty:
         try:
-            # Ensure datetime parsing with flexible format
-            usgs_df = usgs_df.copy()
-            if not pd.api.types.is_datetime64_any_dtype(usgs_df['time']):
-                usgs_df['time'] = pd.to_datetime(usgs_df['time'], format='ISO8601')
+            # Use all available earthquake data (limited for performance)
+            quakes_to_show = usgs_df.head(max_quakes)
+            logger.info(f"  Historical quakes layer: {len(quakes_to_show)} of {len(usgs_df)} earthquakes")
             
-            # Make timezone-naive for comparison
-            if usgs_df['time'].dt.tz is not None:
-                usgs_df['time'] = usgs_df['time'].dt.tz_localize(None)
-            
-            cutoff_date = pd.Timestamp.now() - timedelta(days=days_back)
-            recent_quakes = usgs_df[usgs_df['time'] > cutoff_date]
-            
-            # If no recent quakes, show all available data (sample)
-            if len(recent_quakes) == 0:
-                logger.info(f"  No quakes in last {days_back} days, showing sample of all data")
-                recent_quakes = usgs_df.head(300)
-            else:
-                recent_quakes = recent_quakes.head(300)
-            
-            logger.info(f"  Historical quakes layer: {len(recent_quakes)} earthquakes")
-            
-            for _, row in recent_quakes.iterrows():
+            for _, row in quakes_to_show.iterrows():
                 mag = row.get('mag', 3.0)
                 if pd.isna(mag):
                     mag = 3.0
@@ -321,7 +299,7 @@ def add_historical_layer(
                     fillColor='blue',
                     fillOpacity=0.5,
                     popup=f"Earthquake<br>Magnitude: {mag:.1f}<br>"
-                          f"Date: {row['time']}<br>"
+                          f"Date: {row.get('time', 'N/A')}<br>"
                           f"Location: {row.get('place', 'N/A')}"
                 ).add_to(quake_group)
         except Exception as e:
