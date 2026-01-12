@@ -899,12 +899,36 @@ class RiskDashboard:
             else:
                 color = 'green'
             
+            fire_risk = row.get('fire_risk_score', 0)
+            quake_risk = row.get('quake_risk_score', 0)
+            site_name = row['site_name']
+            lat = row['lat']
+            lon = row['lon']
+            
             popup_html = f'''
-            <div style="width: 250px;">
-                <h4>{row['site_name']}</h4>
-                <p>🔥 Fire: {row.get('fire_risk_score', 0):.1f}%</p>
-                <p>🌍 Quake: {row.get('quake_risk_score', 0):.1f}%</p>
-                <p>⚠️ Combined: {risk:.1f}%</p>
+            <div style="width: 250px; font-family: Arial, sans-serif;">
+                <h4 style="margin: 0 0 10px 0;">{site_name}</h4>
+                <hr>
+                <div style="margin: 5px 0;">
+                    <strong>🔥 Fire Risk:</strong> {fire_risk:.1f}%
+                    <div style="background: #ffcccc; height: 8px; border-radius: 4px;">
+                        <div style="background: #dc3545; height: 8px; width: {min(fire_risk, 100)}%; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <div style="margin: 5px 0;">
+                    <strong>🌍 Quake Risk:</strong> {quake_risk:.1f}%
+                    <div style="background: #cce5ff; height: 8px; border-radius: 4px;">
+                        <div style="background: #0d6efd; height: 8px; width: {min(quake_risk, 100)}%; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <hr>
+                <div style="margin: 5px 0;">
+                    <strong>⚠️ Combined:</strong> {risk:.1f}%
+                </div>
+                <button onclick="parent.addToRoute('{site_name}', {lat}, {lon}, {fire_risk}, {quake_risk}, {risk})"
+                        style="width: 100%; margin-top: 10px; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                    ➕ Zur Route hinzufügen
+                </button>
             </div>
             '''
             
