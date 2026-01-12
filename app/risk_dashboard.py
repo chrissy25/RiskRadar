@@ -829,10 +829,9 @@ class RiskDashboard:
             tiles='OpenStreetMap'
         )
         
-        # Add routes
+        # Add routes (polylines only, no waypoint markers)
         for route in self.routes:
             create_route_polylines(m, route)
-            create_waypoint_markers(m, route)
         
         # Add prediction markers for non-route locations
         self._add_prediction_markers(m)
