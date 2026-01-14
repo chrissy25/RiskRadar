@@ -168,6 +168,23 @@ def generate_sidebar_html(routes: List[Route]) -> str:
                     {route_list}
                 </div>
             </div>
+            <div id="predefined-route-summary" style="display: none;">
+                <div class="risk-total">
+                    <div class="risk-row">
+                        <span>🔥 Feuer:</span>
+                        <span id="predefined-fire">0%</span>
+                    </div>
+                    <div class="risk-row">
+                        <span>🌍 Erdbeben:</span>
+                        <span id="predefined-quake">0%</span>
+                    </div>
+                    <hr>
+                    <div class="risk-row total-row">
+                        <strong>⚠️ Gesamtrisiko:</strong>
+                        <strong id="predefined-risk">0%</strong>
+                    </div>
+                </div>
+            </div>
             <button class="reset-btn" onclick="resetRouteSelection()">Auswahl zurücksetzen</button>
         </div>
         
@@ -672,14 +689,19 @@ def generate_dashboard_js(predictions_df: pd.DataFrame, routes: List[Route]) -> 
     locations = []
     
     # Add prediction locations with their risk values
+    # Support both column name formats: 'fire_risk' and 'fire_risk_score'
     for _, row in predictions_df.iterrows():
+        fire_risk = row.get('fire_risk_score', row.get('fire_risk', 0))
+        quake_risk = row.get('quake_risk_score', row.get('quake_risk', 0))
+        combined_risk = row.get('combined_risk_score', row.get('combined_risk', 0))
+        
         locations.append({
             'name': row['site_name'],
             'lat': float(row['lat']),
             'lon': float(row['lon']),
-            'fireRisk': float(row.get('fire_risk', 0)),
-            'quakeRisk': float(row.get('quake_risk', 0)),
-            'combinedRisk': float(row.get('combined_risk', 0)),
+            'fireRisk': float(fire_risk) if not pd.isna(fire_risk) else 0.0,
+            'quakeRisk': float(quake_risk) if not pd.isna(quake_risk) else 0.0,
+            'combinedRisk': float(combined_risk) if not pd.isna(combined_risk) else 0.0,
             'type': 'location'
         })
     
@@ -708,7 +730,9 @@ def generate_dashboard_js(predictions_df: pd.DataFrame, routes: List[Route]) -> 
                 'lat': float(point.lat),
                 'lon': float(point.lon),
                 'name': point.name,
-                'risk': float(point.combined_risk)
+                'risk': float(point.combined_risk),
+                'fire_risk': float(point.fire_risk),
+                'quake_risk': float(point.quake_risk)
             })
         routes_data.append({
             'id': route.route_id,
@@ -729,6 +753,9 @@ const routesData = {routes_json};
 // Currently active route polyline
 let activeRoutePolyline = null;
 let selectedRouteId = null;
+
+// Custom route being built (polyline)
+let customRoutePolyline = null;
 
 // Current route being built
 let currentRoute = [];
@@ -769,6 +796,7 @@ function selectRoute(routeId) {{
     if (selectedRouteId === routeId) {{
         selectedRouteId = null;
         updateRouteItemHighlight(null);
+        document.getElementById('predefined-route-summary').style.display = 'none';
         return;
     }}
     
@@ -791,9 +819,29 @@ function selectRoute(routeId) {{
         opacity: 0.8
     }}).addTo(map);
     
-    // Pan to first waypoint
-    const first = route.points[0];
-    map.flyTo([first.lat, first.lon], 5, {{ duration: 1.5 }});
+    // Fit map bounds to show all route points
+    const bounds = L.latLngBounds(coords);
+    map.flyToBounds(bounds, {{
+        padding: [50, 50],
+        duration: 1.5,
+        maxZoom: 8
+    }});
+    
+    // Calculate and display route risk summary
+    const fireRisks = route.points.map(p => p.fire_risk || 0);
+    const quakeRisks = route.points.map(p => p.quake_risk || 0);
+    const totalRisks = route.points.map(p => p.risk || 0);
+    
+    const avgFire = fireRisks.reduce((a, b) => a + b, 0) / fireRisks.length;
+    const avgQuake = quakeRisks.reduce((a, b) => a + b, 0) / quakeRisks.length;
+    const avgTotal = totalRisks.reduce((a, b) => a + b, 0) / totalRisks.length;
+    
+    const formatRisk = (val) => val < 10 ? val.toFixed(1) : val.toFixed(0);
+    
+    document.getElementById('predefined-fire').textContent = formatRisk(avgFire) + '%';
+    document.getElementById('predefined-quake').textContent = formatRisk(avgQuake) + '%';
+    document.getElementById('predefined-risk').textContent = formatRisk(avgTotal) + '%';
+    document.getElementById('predefined-route-summary').style.display = 'block';
 }}
 
 function updateRouteItemHighlight(routeId) {{
@@ -828,10 +876,40 @@ function filterRoutes(query) {{
             loc.name.toLowerCase().includes(lowerQuery)
         );
         if (match) {{
-            panToLocation(match.lat, match.lon, match.name);
+            // Zoom to location with reasonable zoom level (not too close)
+            const map = getMapObject();
+            if (map) {{
+                map.flyTo([match.lat, match.lon], 6, {{ duration: 1.0 }});
+                
+                // Find and open the popup for this marker
+                setTimeout(() => {{
+                    openMarkerPopup(match.lat, match.lon);
+                }}, 1100);
+            }}
+            
+            // Update sidebar profile
             updateLocationProfile(match.name, match.fireRisk || 0, match.quakeRisk || 0, 0);
         }}
     }}
+}}
+
+// Find and open popup for marker at given coordinates
+function openMarkerPopup(targetLat, targetLon) {{
+    const map = getMapObject();
+    if (!map) return;
+    
+    const tolerance = 0.001;
+    map.eachLayer(layer => {{
+        if (layer.getLatLng) {{
+            const latlng = layer.getLatLng();
+            if (Math.abs(latlng.lat - targetLat) < tolerance && 
+                Math.abs(latlng.lng - targetLon) < tolerance) {{
+                if (layer.getPopup) {{
+                    layer.openPopup();
+                }}
+            }}
+        }}
+    }});
 }}
 
 // Handle Enter key in search box
@@ -854,10 +932,13 @@ document.addEventListener('DOMContentLoaded', function() {{
 }});
 
 function updateLocationProfile(name, fire, quake, flood) {{
+    // Format values: use 1 decimal for small values, 0 decimals for larger ones
+    const formatRisk = (val) => val < 10 ? val.toFixed(1) : val.toFixed(0);
+    
     document.getElementById('profile-name').textContent = name;
-    document.getElementById('profile-fire').textContent = fire.toFixed(0) + '%';
-    document.getElementById('profile-quake').textContent = quake.toFixed(0) + '%';
-    document.getElementById('profile-flood').textContent = flood.toFixed(0) + '%';
+    document.getElementById('profile-fire').textContent = formatRisk(fire) + '%';
+    document.getElementById('profile-quake').textContent = formatRisk(quake) + '%';
+    document.getElementById('profile-flood').textContent = formatRisk(flood) + '%';
     
     document.getElementById('bar-fire').style.width = Math.min(fire, 100) + '%';
     document.getElementById('bar-quake').style.width = Math.min(quake, 100) + '%';
@@ -884,6 +965,11 @@ function removeFromRoute(index) {{
 }}
 
 function clearRoute() {{
+    const map = getMapObject();
+    if (customRoutePolyline && map) {{
+        map.removeLayer(customRoutePolyline);
+        customRoutePolyline = null;
+    }}
     currentRoute = [];
     renderRouteBuilder();
 }}
@@ -938,6 +1024,42 @@ function renderRouteBuilder() {{
     document.getElementById('total-fire').textContent = avgFire.toFixed(0) + '%';
     document.getElementById('total-quake').textContent = avgQuake.toFixed(0) + '%';
     document.getElementById('total-risk').textContent = avgCombined.toFixed(0) + '%';
+    
+    // Draw polyline on map
+    drawCustomRoutePolyline();
+}}
+
+function drawCustomRoutePolyline() {{
+    const map = getMapObject();
+    if (!map) return;
+    
+    const iframe = document.querySelector('#map-container iframe');
+    const L = iframe.contentWindow.L;
+    
+    // Remove existing custom route polyline
+    if (customRoutePolyline) {{
+        map.removeLayer(customRoutePolyline);
+        customRoutePolyline = null;
+    }}
+    
+    // Need at least 2 points to draw a line
+    if (currentRoute.length < 2) return;
+    
+    // Build coordinates array
+    const coords = currentRoute.map(p => [p.lat, p.lon]);
+    
+    // Draw polyline with distinct style (green/orange based on risk)
+    const avgRisk = currentRoute.reduce((sum, p) => sum + p.combinedRisk, 0) / currentRoute.length;
+    let lineColor = '#28a745'; // green for low risk
+    if (avgRisk >= 50) lineColor = '#dc3545'; // red for high
+    else if (avgRisk >= 25) lineColor = '#fd7e14'; // orange for medium
+    
+    customRoutePolyline = L.polyline(coords, {{
+        color: lineColor,
+        weight: 5,
+        opacity: 0.9,
+        dashArray: '10, 5' // dashed line to distinguish from predefined routes
+    }}).addTo(map);
 }}
 
 // ==================== TAB FUNCTIONS ====================
@@ -990,6 +1112,7 @@ function resetRouteSelection() {{
     
     selectedRouteId = null;
     updateRouteItemHighlight(null);
+    document.getElementById('predefined-route-summary').style.display = 'none';
     console.log('Route selection reset');
 }}
 
@@ -1006,6 +1129,12 @@ window.addToRoute = function(name, lat, lon, fireRisk, quakeRisk, combinedRisk) 
     
     // Auto-switch to Build tab
     switchTab('build');
+    
+    // Close popup
+    const map = getMapObject();
+    if (map) {{
+        map.closePopup();
+    }}
     
     console.log('Added to route:', name);
 }};

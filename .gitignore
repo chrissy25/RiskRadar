@@ -42,6 +42,9 @@ data/cache/*.csv
 outputs/*.pkl
 outputs/*.joblib
 
+# Project specific - Generated dashboard
+outputs/risk_dashboard.html
+
 # Project specific - Large Data Files
 FIRMS_2024_ARCHIVE/*.csv
 FIRMS_2025_NRT/*.csv
