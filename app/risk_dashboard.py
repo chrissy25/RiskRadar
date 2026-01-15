@@ -1324,6 +1324,9 @@ if __name__ == "__main__":
     # Test with mock data
     logging.basicConfig(level=logging.INFO)
     
+    # Use absolute paths based on script location
+    BASE_DIR = Path(__file__).parent.parent
+    
     # Create mock predictions
     mock_predictions = pd.DataFrame({
         'site_name': ['Hamburg', 'Mumbai', 'Manila', 'Los Angeles', 'Miami'],
@@ -1334,8 +1337,8 @@ if __name__ == "__main__":
         'combined_risk_score': [28, 70, 81, 88, 40]
     })
     
-    routes_path = Path('../data/routes.csv')
-    output_path = Path('../outputs/risk_dashboard.html')
+    routes_path = BASE_DIR / 'data' / 'routes.csv'
+    output_path = BASE_DIR / 'outputs' / 'risk_dashboard.html'
     
     if routes_path.exists():
         generate_dashboard(mock_predictions, routes_path, output_path)
