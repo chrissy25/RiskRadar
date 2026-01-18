@@ -22,7 +22,7 @@ class Config:
     # Feature Engineering
     LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "7"))
     FORECAST_HOURS = int(os.getenv("FORECAST_HOURS", "72"))
-    OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")  # Optional: For OpenWeatherMap vs Open-Meteo
+    OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
     
     # File Paths
     DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
