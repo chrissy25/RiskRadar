@@ -98,19 +98,17 @@ def fetch_sensor_data():
     """
     logger.info("\nFetching sensor data...")
     
-    # FIRMS
+    # FIRMS - Use FIRMSClient which loads all available files
     logger.info("  Fetching FIRMS data...")
     firms_client = FIRMSClient()
     
-    # Try cache, otherwise API
-    firms_csv = Path('FIRMS_2025_NRT/fire_nrt_M-C61_699365.csv')  # Most recent NRT data
-    if firms_csv.exists():
-        logger.info(f"    Using cached FIRMS: {firms_csv}")
-        firms_df = pd.read_csv(firms_csv)
-        firms_df['acq_date'] = pd.to_datetime(firms_df['acq_date']).dt.tz_localize('UTC')
+    # Get the combined data from the client
+    if firms_client._data is not None and len(firms_client._data) > 0:
+        firms_df = firms_client._data.copy()
+        if 'acq_date' in firms_df.columns and firms_df['acq_date'].dt.tz is None:
+            firms_df['acq_date'] = firms_df['acq_date'].dt.tz_localize('UTC')
     else:
-        logger.info("    No cache found, using API...")
-        # Hier würdest du API fetchen
+        logger.warning("    No FIRMS data available from client")
         firms_df = pd.DataFrame({
             'latitude': [],
             'longitude': [],
@@ -293,9 +291,16 @@ def export_risk_data_json(
             'combined': round(float(row['combined_risk_score']), 2)
         }
     
-    # Build historical fires list
+    # Build historical fires list (most recent first, limited)
     fires_list = []
-    fires_to_export = firms_df if max_historical_events is None else firms_df.head(max_historical_events)
+    # Sort by date descending to get most recent fires
+    if 'acq_date' in firms_df.columns and len(firms_df) > 0:
+        firms_sorted = firms_df.sort_values('acq_date', ascending=False)
+    else:
+        firms_sorted = firms_df
+    # Apply limit (default to 10000 if not specified)
+    limit = max_historical_events if max_historical_events is not None else 10000
+    fires_to_export = firms_sorted.head(limit)
     for _, row in fires_to_export.iterrows():
         fires_list.append({
             'lat': float(row['latitude']),
@@ -304,9 +309,14 @@ def export_risk_data_json(
             'brightness': float(row.get('brightness', 0)) if not pd.isna(row.get('brightness', 0)) else 0
         })
     
-    # Build historical quakes list
+    # Build historical quakes list (most recent first, limited)
     quakes_list = []
-    quakes_to_export = usgs_df if max_historical_events is None else usgs_df.head(max_historical_events)
+    # Sort by time descending to get most recent quakes
+    if 'time' in usgs_df.columns and len(usgs_df) > 0:
+        usgs_sorted = usgs_df.sort_values('time', ascending=False)
+    else:
+        usgs_sorted = usgs_df
+    quakes_to_export = usgs_sorted.head(limit)
     for _, row in quakes_to_export.iterrows():
         quakes_list.append({
             'lat': float(row['latitude']),
