@@ -35,9 +35,9 @@ class Config:
     FIRMS_2024_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "FIRMS_2024_ARCHIVE")
     FIRMS_2025_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "FIRMS_2025_NRT")
 
-    FIRMS_ARCHIVE_2024_FILE = os.path.join(FIRMS_2024_DIR, "fire_archive_M-C61_702295.csv")
-    FIRMS_ARCHIVE_2025_FILE = os.path.join(FIRMS_2025_DIR, "fire_archive_M-C61_702294.csv")
-    FIRMS_NRT_2025_FILE = os.path.join(FIRMS_2025_DIR, "fire_nrt_M-C61_702294.csv")
+    FIRMS_ARCHIVE_2024_FILE = os.path.join(FIRMS_2024_DIR, "fire_archive_M-C61.csv")
+    FIRMS_ARCHIVE_2025_FILE = os.path.join(FIRMS_2025_DIR, "fire_archive_M-C61.csv")
+    FIRMS_NRT_2025_FILE = os.path.join(FIRMS_2025_DIR, "fire_nrt_M-C61.csv")
     
     # Output Files
     FIRE_MODEL_FILE = os.path.join(OUTPUT_DIR, "fire_model_v4.pkl")
