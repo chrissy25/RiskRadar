@@ -1,0 +1,61 @@
+[
+    {
+        "route_id": "A",
+        "points": [
+            {
+                "order": 1,
+                "name": "Hamburg"
+            },
+            {
+                "order": 2,
+                "name": "Frankfurt"
+            },
+            {
+                "order": 3,
+                "name": "München"
+            }
+        ]
+    },
+    {
+        "route_id": "B",
+        "points": [
+            {
+                "order": 1,
+                "name": "Tokyo"
+            },
+            {
+                "order": 2,
+                "name": "Osaka"
+            },
+            {
+                "order": 3,
+                "name": "Manila"
+            },
+            {
+                "order": 4,
+                "name": "Jakarta"
+            }
+        ]
+    },
+    {
+        "route_id": "C",
+        "points": [
+            {
+                "order": 1,
+                "name": "Los Angeles"
+            },
+            {
+                "order": 2,
+                "name": "Phoenix"
+            },
+            {
+                "order": 3,
+                "name": "Houston"
+            },
+            {
+                "order": 4,
+                "name": "Miami"
+            }
+        ]
+    }
+]

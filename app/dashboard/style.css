@@ -1,0 +1,357 @@
+/* RiskRadar Dashboard Styles */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: flex;
+}
+
+/* Sidebar */
+#sidebar {
+    width: 320px;
+    height: 100vh;
+    background: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    overflow-y: auto;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 10000;
+    padding: 15px;
+}
+
+/* Map Container */
+#map-container {
+    margin-left: 320px;
+    width: calc(100% - 320px);
+    height: 100vh;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* Header */
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+    color: #333;
+}
+
+.sidebar-header h3 {
+    margin: 5px 0 15px 0;
+    font-size: 1em;
+    color: #666;
+    font-weight: normal;
+}
+
+/* Sections */
+.sidebar-section {
+    margin-bottom: 20px;
+}
+
+.sidebar-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.95em;
+    color: #333;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 5px;
+}
+
+/* Search Box */
+#search-box {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+/* Route Items */
+.route-item {
+    background: white;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.route-item:hover {
+    background: #e9ecef;
+}
+
+.route-item.selected {
+    background: #cce5ff;
+}
+
+.route-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.route-icons {
+    font-size: 1.1em;
+}
+
+.route-risk {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Profile Section */
+.profile-section {
+    background: white;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.profile-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.95em;
+}
+
+.profile-stats {
+    font-size: 0.85em;
+    margin: 10px 0;
+}
+
+/* Bar Chart */
+.bar-chart {
+    margin-top: 15px;
+}
+
+.bar-container {
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    overflow: hidden;
+}
+
+.bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.bar-fire { background: #dc3545; }
+.bar-quake { background: #fd7e14; }
+
+.bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75em;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Route Builder */
+.route-builder-section {
+    background: white;
+    padding: 12px;
+    border-radius: 4px;
+}
+
+.route-builder-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.95em;
+}
+
+.builder-hint {
+    color: #666;
+    font-size: 0.85em;
+    font-style: italic;
+    margin: 0;
+}
+
+#route-builder-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.route-waypoint-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    margin: 4px 0;
+    background: #e9ecef;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+.route-waypoint-item .waypoint-name {
+    font-weight: 500;
+}
+
+.route-waypoint-item .waypoint-risk {
+    color: #dc3545;
+}
+
+.route-waypoint-item .remove-btn {
+    cursor: pointer;
+    color: #999;
+    font-size: 1.1em;
+}
+
+.route-waypoint-item .remove-btn:hover {
+    color: #dc3545;
+}
+
+/* Risk Summary */
+#route-summary {
+    margin-top: 10px;
+}
+
+.risk-total {
+    background: #f8f9fa;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.risk-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-size: 0.9em;
+}
+
+.total-row {
+    font-size: 1em;
+    margin-top: 8px;
+}
+
+/* Buttons */
+#clear-route-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+#clear-route-btn:hover {
+    background: #c82333;
+}
+
+.reset-btn {
+    width: 100%;
+    padding: 8px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    margin-top: 10px;
+}
+
+.reset-btn:hover {
+    background: #5a6268;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 15px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px 5px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    font-size: 0.8em;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: #333;
+    background: #f8f9fa;
+}
+
+.tab-btn.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    font-weight: 500;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Legend */
+#legend {
+    position: fixed;
+    bottom: 50px;
+    right: 50px;
+    width: 180px;
+    background: white;
+    border: 2px solid #ccc;
+    z-index: 9999;
+    padding: 10px;
+    font-size: 13px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+
+#legend h4 {
+    margin: 0 0 10px 0;
+}
+
+#legend p {
+    margin: 3px 0;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+/* Loading Indicator */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.loading.hidden {
+    display: none;
+}
+
+/* Data Status */
+.data-status {
+    margin-top: 20px;
+    padding: 10px;
+    background: #e9ecef;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiskRadar - Logistik-Risikobewertung Dashboard</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Dashboard CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>Logistik-Risikobewertung</h2>
+            <h3>Dashboard</h3>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="search" onclick="switchTab('search')">🔍 Suche</button>
+            <button class="tab-btn" data-tab="routes" onclick="switchTab('routes')">🗺️ Routen</button>
+            <button class="tab-btn" data-tab="build" onclick="switchTab('build')">🛤️ Builder</button>
+        </div>
+
+        <!-- Tab Content: Search -->
+        <div id="tab-search" class="tab-content active">
+            <div class="sidebar-section">
+                <h4>Standortsuche</h4>
+                <input type="text" id="search-box" placeholder="Standort suchen..."
+                    onkeyup="handleSearch(this.value, event)">
+            </div>
+            <div class="sidebar-section">
+                <div class="profile-section">
+                    <h4>Standort-Risikoprofil</h4>
+                    <div class="profile-location">
+                        <strong>Standort:</strong> <span id="profile-name">Wählen Sie einen Standort</span>
+                    </div>
+                    <div class="profile-stats">
+                        <div>Feuer: <span id="profile-fire">0%</span></div>
+                        <div>Erdbeben: <span id="profile-quake">0%</span></div>
+                    </div>
+                    <div class="bar-chart">
+                        <div class="bar-container">
+                            <div class="bar bar-fire" id="bar-fire" style="width: 0%;"></div>
+                        </div>
+                        <div class="bar-container">
+                            <div class="bar bar-quake" id="bar-quake" style="width: 0%;"></div>
+                        </div>
+                        <div class="bar-labels">
+                            <span>Feuer</span>
+                            <span>Erdbeben</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Content: Pre-defined Routes -->
+        <div id="tab-routes" class="tab-content">
+            <div class="sidebar-section">
+                <h4>Vordefinierte Routen</h4>
+                <div id="route-list">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+            <div id="predefined-route-summary" style="display: none;">
+                <div class="risk-total">
+                    <div class="risk-row">
+                        <span>🔥 Feuer:</span>
+                        <span id="predefined-fire">0%</span>
+                    </div>
+                    <div class="risk-row">
+                        <span>🌍 Erdbeben:</span>
+                        <span id="predefined-quake">0%</span>
+                    </div>
+                    <hr>
+                    <div class="risk-row total-row">
+                        <strong>⚠️ Gesamtrisiko:</strong>
+                        <strong id="predefined-risk">0%</strong>
+                    </div>
+                </div>
+            </div>
+            <button class="reset-btn" onclick="resetRouteSelection()">Auswahl zurücksetzen</button>
+        </div>
+
+        <!-- Tab Content: Build Route -->
+        <div id="tab-build" class="tab-content">
+            <div class="route-builder-section">
+                <h4>🛤️ Routen-Builder</h4>
+                <p class="builder-hint" id="builder-hint">Klicken Sie auf Standorte auf der Karte, um eine Route zu
+                    erstellen</p>
+                <div id="route-builder-list"></div>
+                <div id="route-summary" style="display: none;">
+                    <div class="risk-total">
+                        <div class="risk-row">
+                            <span>🔥 Feuer:</span>
+                            <span id="total-fire">0%</span>
+                        </div>
+                        <div class="risk-row">
+                            <span>🌍 Erdbeben:</span>
+                            <span id="total-quake">0%</span>
+                        </div>
+                        <hr>
+                        <div class="risk-row total-row">
+                            <strong>⚠️ Gesamtrisiko:</strong>
+                            <strong id="total-risk">0%</strong>
+                        </div>
+                    </div>
+                </div>
+                <button id="clear-route-btn" onclick="clearRoute()" style="display: none;">Route löschen</button>
+            </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="loading">
+            <p>Daten werden geladen...</p>
+        </div>
+
+        <!-- Data status -->
+        <div id="data-status" class="data-status" style="display: none;">
+            <small>Daten vom: <span id="data-timestamp">-</span></small>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map-container">
+        <div id="map"></div>
+    </div>
+
+    <!-- Legend -->
+    <div id="legend">
+        <h4>Risk Level</h4>
+        <p><span class="legend-dot" style="background: #dc3545;"></span> Very High (≥75%)</p>
+        <p><span class="legend-dot" style="background: #fd7e14;"></span> High (50-75%)</p>
+        <p><span class="legend-dot" style="background: #ffc107;"></span> Medium (25-50%)</p>
+        <p><span class="legend-dot" style="background: #28a745;"></span> Low (<25%)< /p>
+                <hr>
+                <small>🔥 Fire | 🌍 Quake | ⚠️ Combined</small>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Dashboard JS -->
+    <script src="app.js"></script>
+</body>
+
+</html>

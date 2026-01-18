@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
-"""
-Risk Dashboard Generator for RiskRadar
+\"\"\"
+[LEGACY] Risk Dashboard Generator for RiskRadar
+
+⚠️ DEPRECATION NOTICE:
+    This module is deprecated and will be removed in a future version.
+    The dashboard is now a static web application located at:
+        app/dashboard/index.html
+    
+    To run the new dashboard:
+        ./scripts/serve_dashboard.sh
+    
+    This file is kept for reference during migration.
+
+---
 
 Creates an interactive HTML dashboard with:
 - Left sidebar with route list, location profile, and charts
@@ -10,7 +22,7 @@ Creates an interactive HTML dashboard with:
 
 Author: RiskRadar Team
 Date: 2025-01-12
-"""
+\"\"\"
 
 import pandas as pd
 import numpy as np

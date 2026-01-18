@@ -23,6 +23,9 @@ class Config:
     LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "7"))
     FORECAST_HOURS = int(os.getenv("FORECAST_HOURS", "72"))
     
+    # API Keys
+    OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", None)
+    
     # File Paths
     DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
     OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")

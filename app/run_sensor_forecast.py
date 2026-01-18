@@ -18,8 +18,7 @@ from pathlib import Path
 import logging
 from datetime import datetime, timezone
 import joblib
-import folium
-from folium import plugins
+import json
 
 # Local imports
 from sensor_features import extract_all_features
@@ -264,112 +263,79 @@ def predict_dual_risk(
     }
 
 
-# ==================== VISUALIZATION ====================
+# ==================== JSON EXPORT ====================
 
-def create_dual_risk_map(predictions_df: pd.DataFrame, output_path: Path):
+def export_risk_data_json(
+    predictions_df: pd.DataFrame,
+    firms_df: pd.DataFrame,
+    usgs_df: pd.DataFrame,
+    output_path: Path,
+    max_historical_events: int = None
+):
     """
-    Create interactive map with dual-risk visualization.
+    Export risk data to JSON for the static dashboard.
     
     Args:
         predictions_df: DataFrame with predictions
-        output_path: Path for HTML output
+        firms_df: FIRMS historical fire data
+        usgs_df: USGS historical earthquake data
+        output_path: Path for JSON output
+        max_historical_events: Optional cap on events (None = no cap)
     """
-    logger.info("\nCreating interactive map...")
+    logger.info("\nExporting risk data to JSON...")
     
-    # Base map
-    m = folium.Map(
-        location=[20, 0],  # Welt-Zentrum
-        zoom_start=2,
-        tiles='OpenStreetMap'
-    )
+    # Build predictions dictionary (keyed by site name)
+    predictions_dict = {}
+    for _, row in predictions_df.iterrows():
+        predictions_dict[row['site_name']] = {
+            'fire_risk': round(float(row['fire_risk_score']), 2),
+            'quake_risk': round(float(row['quake_risk_score']), 2),
+            'combined': round(float(row['combined_risk_score']), 2)
+        }
     
-    # Marker for each site
-    for idx, row in predictions_df.iterrows():
-        
-        # Color based on Combined Risk
-        combined_risk = row['combined_risk_score']
-        if combined_risk >= 75:
-            color = 'red'
-            risk_label = 'Very High'
-        elif combined_risk >= 50:
-            color = 'orange'
-            risk_label = 'High'
-        elif combined_risk >= 25:
-            color = 'yellow'
-            risk_label = 'Medium'
-        else:
-            color = 'green'
-            risk_label = 'Low'
-        
-        # Popup with details
-        popup_html = f"""
-        <div style="font-family: Arial; width: 300px;">
-            <h3 style="margin: 0 0 10px 0;">{row['site_name']}</h3>
-            <hr>
-            
-            <div style="margin: 10px 0;">
-                <b>🔥 Fire Risk:</b> {row['fire_risk_score']:.1f}% 
-                <div style="background: #ffcccc; height: 10px; border-radius: 5px; margin: 5px 0;">
-                    <div style="background: #ff0000; height: 10px; width: {row['fire_risk_score']}%; border-radius: 5px;"></div>
-                </div>
-            </div>
-            
-            <div style="margin: 10px 0;">
-                <b>🌍 Quake Risk:</b> {row['quake_risk_score']:.1f}%
-                <div style="background: #cce5ff; height: 10px; border-radius: 5px; margin: 5px 0;">
-                    <div style="background: #0066cc; height: 10px; width: {row['quake_risk_score']}%; border-radius: 5px;"></div>
-                </div>
-            </div>
-            
-            <hr>
-            
-            <div style="margin: 10px 0;">
-                <b>⚠️ Combined Risk:</b> {row['combined_risk_score']:.1f}%
-                <div style="background: #e0e0e0; height: 15px; border-radius: 5px; margin: 5px 0;">
-                    <div style="background: {color}; height: 15px; width: {row['combined_risk_score']}%; border-radius: 5px;"></div>
-                </div>
-                <span style="color: {color}; font-weight: bold;">{risk_label}</span>
-            </div>
-            
-            <hr>
-            <small>Vorhersage für nächste 72h</small>
-        </div>
-        """
-        
-        folium.CircleMarker(
-            location=[row['lat'], row['lon']],
-            radius=10,
-            popup=folium.Popup(popup_html, max_width=300),
-            tooltip=f"{row['site_name']}: {combined_risk:.1f}%",
-            color=color,
-            fillColor=color,
-            fillOpacity=0.7,
-            weight=2
-        ).add_to(m)
+    # Build historical fires list
+    fires_list = []
+    fires_to_export = firms_df if max_historical_events is None else firms_df.head(max_historical_events)
+    for _, row in fires_to_export.iterrows():
+        fires_list.append({
+            'lat': float(row['latitude']),
+            'lon': float(row['longitude']),
+            'date': str(row['acq_date'].date()) if hasattr(row['acq_date'], 'date') else str(row['acq_date']),
+            'brightness': float(row.get('brightness', 0)) if not pd.isna(row.get('brightness', 0)) else 0
+        })
     
-    # Legend
-    legend_html = """
-    <div style="position: fixed; 
-                bottom: 50px; right: 50px; width: 200px; 
-                background: white; border: 2px solid grey; z-index: 9999; 
-                padding: 10px; font-size: 14px;">
-        <h4 style="margin: 0 0 10px 0;">Risk Level</h4>
-        <p><span style="color: red;">●</span> Very High (≥75%)</p>
-        <p><span style="color: orange;">●</span> High (50-75%)</p>
-        <p><span style="color: yellow;">●</span> Medium (25-50%)</p>
-        <p><span style="color: green;">●</span> Low (<25%)</p>
-        <hr>
-        <small>🔥 Fire | 🌍 Quake | ⚠️ Combined</small>
-    </div>
-    """
-    m.get_root().html.add_child(folium.Element(legend_html))
+    # Build historical quakes list
+    quakes_list = []
+    quakes_to_export = usgs_df if max_historical_events is None else usgs_df.head(max_historical_events)
+    for _, row in quakes_to_export.iterrows():
+        quakes_list.append({
+            'lat': float(row['latitude']),
+            'lon': float(row['longitude']),
+            'date': str(row['time'].date()) if hasattr(row['time'], 'date') else str(row['time']),
+            'mag': float(row.get('mag', 0)) if not pd.isna(row.get('mag', 0)) else 0,
+            'place': str(row.get('place', '')) if not pd.isna(row.get('place', '')) else ''
+        })
     
-    # Fullscreen Option
-    plugins.Fullscreen().add_to(m)
+    # Assemble final structure
+    risk_data = {
+        'metadata': {
+            'generated_at': datetime.now(timezone.utc).isoformat()
+        },
+        'predictions': predictions_dict,
+        'historical_events': {
+            'fires': fires_list,
+            'quakes': quakes_list
+        }
+    }
     
-    # Speichern
-    m.save(str(output_path))
-    logger.info(f"  ✓ Map saved: {output_path}")
+    # Write JSON
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(risk_data, f, indent=2, ensure_ascii=False)
+    
+    logger.info(f"  ✓ Exported {len(predictions_dict)} site predictions")
+    logger.info(f"  ✓ Exported {len(fires_list)} historical fires")
+    logger.info(f"  ✓ Exported {len(quakes_list)} historical quakes")
+    logger.info(f"  ✓ JSON saved: {output_path}")
 
 
 # ==================== MAIN ====================
@@ -420,7 +386,7 @@ def main():
             quake_model=quake_model,
             fire_features=fire_features,
             quake_features=quake_features,
-            weather_api_key=Config.OPENWEATHER_API_KEY  # Use real weather data
+            weather_api_key=None  # Open-Meteo is free, no API key needed!
         )
         
         predictions.append(pred)
@@ -434,14 +400,14 @@ def main():
     # 5. Save Results
     logger.info("\n5. Saving Results...")
     
-    # CSV
+    # CSV (keep for compatibility)
     csv_path = OUTPUT_DIR / 'sensor_forecast_72h.csv'
     predictions_df.to_csv(csv_path, index=False)
     logger.info(f"  ✓ CSV saved: {csv_path}")
     
-    # HTML Map
-    map_path = OUTPUT_DIR / 'sensor_forecast_map.html'
-    create_dual_risk_map(predictions_df, map_path)
+    # JSON (new primary output for dashboard)
+    json_path = OUTPUT_DIR / 'risk_data.json'
+    export_risk_data_json(predictions_df, firms_df, usgs_df, json_path)
     
     # 6. Summary
     logger.info("\n" + "="*80)
@@ -464,8 +430,8 @@ def main():
     logger.info("="*80)
     logger.info(f"\nOutputs:")
     logger.info(f"  - CSV:  {csv_path}")
-    logger.info(f"  - Map:  {map_path}")
-    logger.info(f"\nOpen map in browser to explore results!")
+    logger.info(f"  - JSON: {json_path}")
+    logger.info(f"\nTo view the dashboard, run: ./scripts/serve_dashboard.sh")
 
 
 if __name__ == "__main__":
