@@ -2,7 +2,7 @@
 FIRE RISK MODEL V4 - TRAINING SUMMARY
 ============================================================
 
-Training Date: 2026-01-08T15:11:54.709947
+Training Date: 2026-01-15T19:22:24.821236
 Model Type: fire
 
 ARCHITECTURE:
@@ -34,27 +34,27 @@ FEATURES:
     - season
 
 EVALUATION METRICS (Test Set):
-  Recall:    0.768
-  Precision: 0.339
-  F1-Score:  0.471
-  PR-AUC:    0.443
-  ROC-AUC:   0.812
-  Accuracy:  0.746
+  Recall:    0.636
+  Precision: 0.326
+  F1-Score:  0.431
+  PR-AUC:    0.434
+  ROC-AUC:   0.791
+  Accuracy:  0.780
 
 CONFUSION MATRIX:
               Predicted
               0      1
-    Actual 0   425   148
-           1    23    76
+    Actual 0   468   116
+           1    32    56
 
 TOP 10 FEATURES:
-  temp_max                      : 0.1155
-  humidity_mean                 : 0.1071
-  humidity_min                  : 0.1005
-  longitude                     : 0.1002
-  temp_mean                     : 0.0990
-  latitude                      : 0.0859
-  wind_max                      : 0.0816
-  rain_total                    : 0.0787
-  dry_days                      : 0.0501
-  month                         : 0.0499
+  humidity_mean                 : 0.1032
+  longitude                     : 0.0995
+  temp_max                      : 0.0930
+  humidity_min                  : 0.0914
+  latitude                      : 0.0877
+  temp_mean                     : 0.0836
+  rain_total                    : 0.0788
+  wind_max                      : 0.0754
+  fires_30d_count               : 0.0667
+  dry_days                      : 0.0570

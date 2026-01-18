@@ -58,9 +58,11 @@ TEST_SPLIT_DATE = '2025-07-01'  # Time-based split: everything after this goes t
 OUTPUT_DIR = Path(Config.OUTPUT_DIR)
 BASE_DIR = Path(__file__).parent.parent
 
-FIRMS_2024_CSV = BASE_DIR / 'FIRMS_2024_ARCHIVE' / 'fire_archive_M-C61_702295.csv'
-FIRMS_2025_ARCHIVE_CSV = BASE_DIR / 'FIRMS_2025_NRT' / 'fire_archive_M-C61_702294.csv'
-FIRMS_2025_NRT_CSV = BASE_DIR / 'FIRMS_2025_NRT' / 'fire_nrt_M-C61_702294'
+# FIRMS paths from centralized config
+_firms_files = Config.get_firms_files()
+FIRMS_2024_CSV = Path(_firms_files['archive_2024'])
+FIRMS_2025_ARCHIVE_CSV = Path(_firms_files['archive_2025'])
+FIRMS_2025_NRT_CSV = Path(_firms_files['nrt_2025'])
 SITES_CSV = Path(Config.DATA_DIR) / 'standorte.csv'
 
 USGS_HISTORICAL_CSV = Path(Config.DATA_DIR) / 'usgs_historical.csv'

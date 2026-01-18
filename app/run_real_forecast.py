@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = Path(Config.OUTPUT_DIR)
 DATA_DIR = Path(Config.DATA_DIR)
-FIRMS_DIR = BASE_DIR / 'FIRMS_2025_NRT'
+
 SITES_CSV = DATA_DIR / 'standorte.csv'
 
 # Model Paths
@@ -107,8 +107,10 @@ def fetch_sensor_data():
     logger.info("  Fetching FIRMS data...")
     firms_client = FIRMSClient()
     
-    # Versuche Cache, sonst API - use absolute path
-    firms_csv = FIRMS_DIR / 'fire_nrt_M-C61_699365.csv'  # Aktuellste NRT Daten
+    # Try Cache, otherwise API
+    firms_files = Config.get_firms_files()
+    firms_csv = Path(firms_files['nrt_2025'])  # Latest NRT data
+    
     if firms_csv.exists():
         logger.info(f"    Using cached FIRMS: {firms_csv}")
         firms_df = pd.read_csv(firms_csv)
