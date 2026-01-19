@@ -73,11 +73,18 @@ projekt-root/
 ├── data/
 │   ├── standorte.csv              # Standort-Input
 │   └── cache/                     # API-Cache
+├── frontend/                       # Standalone Web-Dashboard
+│   ├── index.html                 # Dashboard HTML
+│   ├── dashboard.js               # Dashboard JavaScript
+│   ├── styles.css                 # Dashboard Styles
+│   └── data/                      # JSON-Daten (auto-generiert)
+│       ├── forecast_data.json     # Vorhersage-Daten
+│       └── forecast_metadata.json # Statistiken & Metadaten
 ├── outputs/
 │   ├── fire_model_v4.pkl          # Trainiertes Fire Model
 │   ├── quake_model_v4.pkl         # Trainiertes Quake Model
-│   ├── real_forecast_72h.csv      # Vorhersage-Ergebnisse
-│   └── real_forecast_map.html     # Interaktive Karte
+│   ├── sensor_forecast_72h.csv    # Vorhersage-Ergebnisse
+│   └── sensor_forecast_map.html   # Interaktive Folium-Karte
 ├── Dockerfile
 ├── docker-compose.yml
 └── .env                           # Konfiguration
@@ -386,7 +393,7 @@ Das Wildfire-Modell nutzt NASA FIRMS Satellitendaten und zeigt **sehr gute Perfo
 
 ## 📈 Outputs
 
-### 1. `real_forecast_72h.csv`
+### 1. `sensor_forecast_72h.csv`
 Vorhersage-Ergebnisse für jeden Standort:
 
 | location      | latitude | longitude | fire_risk | fire_probability | quake_risk | quake_probability |
@@ -394,16 +401,45 @@ Vorhersage-Ergebnisse für jeden Standort:
 | Los Angeles   | 34.05    | -118.24   | HIGH      | 0.78             | LOW        | 0.23              |
 | San Francisco | 37.77    | -122.42   | LOW       | 0.12             | HIGH       | 0.89              |
 
-### 2. `real_forecast_map.html`
+### 2. `sensor_forecast_map.html`
 Interaktive Folium-Karte mit:
 - Standort-Markern (Rot=HIGH RISK, Grün=LOW RISK)
 - Popups mit Fire/Quake Wahrscheinlichkeiten
 - Zoom und Pan-Funktionalität
 
-### 3. Trainierte Modelle
+### 3. JSON-Daten für Frontend (`frontend/data/`)
+- `forecast_data.json`: Alle Site-Vorhersagen mit Risk Scores
+- `forecast_metadata.json`: Statistiken, Version und Generierungszeitpunkt
+
+### 4. Trainierte Modelle
 - `fire_model_v4.pkl`: Random Forest für Feuer-Vorhersage
 - `quake_model_v4.pkl`: Random Forest für Erdbeben-Vorhersage
 - `*_metadata_v4.json`: Modell-Informationen und Metriken
+
+## 🖥️ Frontend Dashboard
+
+Das Projekt enthält ein standalone Web-Dashboard zur Visualisierung der Vorhersagen.
+
+### Frontend starten
+
+```bash
+# 1. Erst Vorhersage ausführen (generiert JSON-Daten)
+python app/run_real_forecast.py
+
+# 2. Lokalen Webserver starten
+cd frontend
+python -m http.server 8000
+
+# 3. Browser öffnen
+open http://localhost:8000
+```
+
+### Features
+- **Interaktive Leaflet-Karte** mit allen Standorten
+- **Risiko-Visualisierung**: Farbkodierte Marker (Rot/Orange/Gelb/Grün)
+- **Sidebar**: Sortierte Site-Liste nach Combined Risk
+- **Statistiken**: Durchschnittliche Fire/Quake/Combined Risk Scores
+- **Responsive Design**: Funktioniert auf Desktop und Mobile
 
 ## 🔍 Logging
 

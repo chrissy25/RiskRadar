@@ -523,10 +523,7 @@ def main():
     predictions_df.to_csv(csv_path, index=False)
     logger.info(f"  ✓ CSV saved: {csv_path}")
     
-    # JSON for frontend (outputs dir)
-    export_json_data(predictions_df, OUTPUT_DIR, target_date)
-    
-    # JSON for frontend (frontend/data dir - duplicate for easier access)
+    # JSON for frontend (frontend/data dir)
     FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
     export_json_data(predictions_df, FRONTEND_DATA_DIR, target_date)
     
@@ -555,8 +552,6 @@ def main():
     logger.info("="*80)
     logger.info(f"\nOutputs:")
     logger.info(f"  - CSV:  {csv_path}")
-    logger.info(f"  - JSON: {OUTPUT_DIR / 'forecast_data.json'}")
-    logger.info(f"  - JSON: {OUTPUT_DIR / 'forecast_metadata.json'}")
     logger.info(f"  - JSON: {FRONTEND_DATA_DIR / 'forecast_data.json'}")
     logger.info(f"  - JSON: {FRONTEND_DATA_DIR / 'forecast_metadata.json'}")
     logger.info(f"  - Map:  {map_path}")
